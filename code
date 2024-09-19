@@ -1,0 +1,109 @@
+import React, { useState, useEffect } from 'react';
+import api from './api'; // Import the Axios instance
+
+function App() {
+  const [posts, setPosts] = useState([]);
+  const [formData, setFormData] = useState({ title: '', body: '' });
+  const [editId, setEditId] = useState(null);
+
+  // Fetch posts from the API (Read)
+  useEffect(() => {
+    api.get('/posts')
+      .then((response) => {
+        setPosts(response.data.slice(0, 10)); // Limit to 10 posts for simplicity
+      })
+      .catch((error) => {
+        console.error('Error fetching posts:', error);
+      });
+  }, []);
+
+  // Handle form input change
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  // Create a new post (Create)
+  const handleCreate = (e) => {
+    e.preventDefault();
+    api.post('/posts', { ...formData, userId: 1 })
+      .then((response) => {
+        setPosts([response.data, ...posts]);
+        setFormData({ title: '', body: '' });
+      })
+      .catch((error) => {
+        console.error('Error creating post:', error);
+      });
+  };
+
+  // Edit a post (set form data for editing)
+  const handleEdit = (post) => {
+    setFormData({ title: post.title, body: post.body });
+    setEditId(post.id);
+  };
+
+  // Update a post (Update)
+  const handleUpdate = (e) => {
+    e.preventDefault();
+    api.put(`/posts/${editId}`, { ...formData, userId: 1 })
+      .then((response) => {
+        setPosts(posts.map((post) => (post.id === editId ? response.data : post)));
+        setFormData({ title: '', body: '' });
+        setEditId(null);
+      })
+      .catch((error) => {
+        console.error('Error updating post:', error);
+      });
+  };
+
+  // Delete a post (Delete)
+  const handleDelete = (id) => {
+    api.delete(`/posts/${id}`)
+      .then(() => {
+        setPosts(posts.filter((post) => post.id !== id));
+      })
+      .catch((error) => {
+        console.error('Error deleting post:', error);
+      });
+  };
+
+  return (
+    <div className="App">
+      <h1>React CRUD with Axios Middleware</h1>
+      
+      {/* Form for Create/Update */}
+      <form onSubmit={editId ? handleUpdate : handleCreate}>
+        <input
+          type="text"
+          name="title"
+          placeholder="Title"
+          value={formData.title}
+          onChange={handleChange}
+          required
+        />
+        <textarea
+          name="body"
+          placeholder="Body"
+          value={formData.body}
+          onChange={handleChange}
+          required
+        ></textarea>
+        <button type="submit">{editId ? 'Update' : 'Create'}</button>
+      </form>
+
+      {/* List of Posts */}
+      <ul>
+        {posts.map((post) => (
+          <li key={post.id}>
+            <h3>{post.title}</h3>
+            <p>{post.body}</p>
+            <button onClick={() => handleEdit(post)}>Edit</button>
+            <button onClick={() => handleDelete(post.id)}>Delete</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default App;
